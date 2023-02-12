@@ -192,14 +192,14 @@ int main()
     ResultType result;
     result.reserve(1'000);
 
-    const auto graph = make_graph(std::span(v_bitset.begin(), v_bitset.end()));
+    // const auto graph = make_graph(std::span(v_bitset.begin(), v_bitset.end()));
 
     std::cout << "Work started" << std::endl;
-    // simply_nested_search(m, std::span(v_bitset.cbegin(), v_bitset.cend()), result);
-    find_words(m, graph, result);
+    simply_nested_search(m, std::span(v_bitset.cbegin(), v_bitset.cend()), result);
+    // find_words(m, graph, result);
     std::cout << "Work ended" << std::endl;
     const auto dfs_done_time = std::chrono::high_resolution_clock::now();
-    std::cout << "Work done in " << std::chrono::duration_cast<std::chrono::seconds>(dfs_done_time - file_read_done_time).count() << " seconds" << std::endl;
+    std::cout << "Work done in " << std::chrono::duration_cast<std::chrono::seconds>(dfs_done_time - file_read_done_time).count() << " seconds, " << result.size() << " solutions found" << std::endl;
     for (auto [w1, w2, w3, w4, w5]: result)
         out << w1 << ' ' << w2 << ' ' << w3 << ' ' << w4 << ' ' << w5 << '\n';
     const auto output_written_time = std::chrono::high_resolution_clock::now();
