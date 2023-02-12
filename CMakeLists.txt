@@ -7,4 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(OpenMP)
 add_executable(wordle5_omp wordle5.cpp)
 target_link_libraries(wordle5_omp PUBLIC OpenMP::OpenMP_CXX)
+
+add_executable(oisyn oisyn.cpp)
+target_link_libraries(oisyn PUBLIC OpenMP::OpenMP_CXX)
+
 configure_file(words_alpha.txt words_alpha.txt COPYONLY)

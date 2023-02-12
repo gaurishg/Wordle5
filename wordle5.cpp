@@ -13,8 +13,10 @@
 #include <ranges>
 #include <omp.h>
 
+#define SHOW_OUTPUT
+
 #ifdef SHOW_OUTPUT
-#define OUTPUT(x) x
+#define OUTPUT(x) x;
 #else
 #define OUTPUT(x) ;
 #endif
@@ -25,7 +27,7 @@ using std::string_view;
 using std::vector;
 using std::unordered_map;
 using Bitset = std::bitset<32>;
-using MapType = std::unordered_map<Bitset, std::vector<std::string_view>>;
+using MapType = std::unordered_map<Bitset, std::vector<std::string>>;
 using ResultType = vector<array<string_view, 5>>;
 using GraphType = std::unordered_map<Bitset, vector<Bitset>>;
 
@@ -40,10 +42,10 @@ inline Bitset word_to_bitmap(std::string_view word)
     return b;
 }
 
-std::tuple<vector<Bitset>, vector<string>, MapType> process_input_file(std::string_view filename = input_filename)
+std::tuple<vector<Bitset>, vector<string_view>, MapType> process_input_file(std::string_view filename = input_filename)
 {
     MapType m;
-    vector<string> vec;
+    vector<string_view> vec;
     vector<Bitset> v_bitset;
     std::unordered_set<Bitset> st;
 
@@ -60,8 +62,8 @@ std::tuple<vector<Bitset>, vector<string>, MapType> process_input_file(std::stri
         if (word.size() == 5 and btmp.count() == 5)
         {
             st.insert(btmp);
-            vec.emplace_back(std::move(word));
-            m[btmp].emplace_back(vec.back());
+            vec.emplace_back(word);
+            m[btmp].emplace_back(std::move(word));
         }
     }
 
@@ -98,51 +100,43 @@ GraphType make_graph(std::span<const Bitset> vec)
     return graph;
 }
 
+void dfs(const MapType& m, const GraphType& graph, ResultType& result, const Bitset start, const int left, vector<Bitset>& v, std::unordered_set<Bitset>& done, const Bitset b, std::unordered_set<Bitset>& visited)
+{
+    if (left == 1)
+    {
+        OUTPUT(std::cout << "Found something" << std::endl;);
+        get_result(m, {v[0], v[1], v[2], v[3], v[4]}, result);
+        OUTPUT(std::cout << "Total solutions " << result.size() << std::endl;);
+        return;
+    }
+
+    if (visited.contains(start))
+        return;
+    visited.insert(start);
+
+    for (const auto& child: graph.at(start))
+    {
+        if (not done.contains(child) and not visited.contains(child) and (child & b).none())
+        {
+            v.push_back(child);
+            dfs(m, graph, result, child, left - 1, v, done, child | b, visited);
+            v.pop_back();
+        }
+    }
+    visited.erase(start);
+}
+
 void find_words(const MapType& m, const GraphType& graph, ResultType& result)
 {
     std::unordered_set<Bitset> done;
-    auto t1 = std::chrono::high_resolution_clock::now();
-    for (const auto& [b1, v1]: m)
+    std::vector<Bitset> acc;
+    std::unordered_set<Bitset> visited;
+    for (const auto& [b, vec_b]: graph)
     {
-        if (done.contains(b1))
-            continue;
-        for (const auto b2: graph.at(b1))
-        {
-            if (done.contains(b2) or (b1 | b2).count() != 10)
-                continue;
-            
-            for (const auto b3: graph.at(b2))
-            {
-                if (done.contains(b3) or (b1 | b2 | b3).count() != 15)
-                    continue;
-                
-                for (const auto b4: graph.at(b3))
-                {
-                    if (done.contains(b4) or (b1 | b2 | b3 | b4).count() != 20)
-                        continue;
-                    
-                    for (const auto b5: graph.at(b4))
-                    {
-                        if (done.contains(b5) or (b1 | b2 | b3 | b4 | b5).count() != 25)
-                            continue;
-                        
-                        const auto t2 = std::chrono::high_resolution_clock::now();
-                        std::cout << "Found something in " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << " seconds" << std::endl;
-                        get_result(m, {b1, b2, b3, b4, b5}, result);
-                        done.insert(b1);
-                        done.insert(b2);
-                        done.insert(b3);
-                        done.insert(b4);
-                        done.insert(b5);
-                        const auto t3 = std::chrono::high_resolution_clock::now();
-                        std::cout << "Results accumulated in " << std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count() << " milliseconsd" << std::endl;
-                        std::cout << "Number of solutions = " << result.size() << std::endl;
-                        t1 = t3;
-                    }
-                }
-            }
-        }
-        
+        acc.push_back(b);
+        dfs(m, graph, result, b, 5, acc, done, b, visited);
+        acc.pop_back();
+        done.insert(b);
     }
 }
 
@@ -198,9 +192,11 @@ int main()
     ResultType result;
     result.reserve(1'000);
 
+    const auto graph = make_graph(std::span(v_bitset.begin(), v_bitset.end()));
+
     std::cout << "Work started" << std::endl;
-    simply_nested_search(m, std::span(v_bitset.cbegin(), v_bitset.cend()), result);
-    // find_words(m, graph, result);
+    // simply_nested_search(m, std::span(v_bitset.cbegin(), v_bitset.cend()), result);
+    find_words(m, graph, result);
     std::cout << "Work ended" << std::endl;
     const auto dfs_done_time = std::chrono::high_resolution_clock::now();
     std::cout << "Work done in " << std::chrono::duration_cast<std::chrono::seconds>(dfs_done_time - file_read_done_time).count() << " seconds" << std::endl;
